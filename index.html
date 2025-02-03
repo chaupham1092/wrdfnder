@@ -3,98 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Word Finder</title>
+    <title>Keywords Search App</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
-        input, button { padding: 10px; font-size: 16px; margin: 5px; }
-        input { width: 300px; }
-        table { width: 90%; margin: 20px auto; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        th { background-color: #f4f4f4; }
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #search-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            width: 60%;
+            max-width: 400px;
+            margin-right: 10px;
+            font-size: 16px;
+        }
+        input[type="submit"] {
+            padding: 8px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        td {
+            background-color: #fff;
+        }
+        .loading {
+            text-align: center;
+            font-size: 18px;
+            color: #555;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Word Finder</h1>
-    <input type="text" id="searchTerm" placeholder="Enter a word...">
-    <button onclick="fetchWords()">Search</button>
+    <h1>Datamuse Word Search</h1>
+    <div id="search-container">
+        <input type="text" id="search-term" placeholder="Enter a search term...">
+        <input type="submit" value="Search" onclick="searchWords()">
+    </div>
 
-    <table>
+    <div id="loading" class="loading" style="display: none;">Loading results...</div>
+
+    <table id="results-table">
         <thead>
             <tr>
-                <th>Suggestions</th>
-                <th>Means Like</th>
-                <th>Sounds Like</th>
-                <th>Spelled Like</th>
-                <th>Related Words</th>
-                <th>Topic Words</th>
+                <th>Literal Meanings</th>
+                <th>Figurative/Contextual Meanings</th>
             </tr>
         </thead>
-        <tbody id="resultsTable">
-            <tr>
-                <td colspan="6">Enter a word and click search...</td>
-            </tr>
+        <tbody>
         </tbody>
     </table>
 
     <script>
-        async function fetchWords() {
-            const query = document.getElementById("searchTerm").value.trim();
-            if (!query) {
-                document.getElementById("resultsTable").innerHTML = '<tr><td colspan="6">Enter a word and click search...</td></tr>';
+        function searchWords() {
+            const searchTerm = document.getElementById('search-term').value;
+            if (!searchTerm) {
+                alert('Please enter a search term.');
                 return;
             }
 
-            const endpoints = {
-                suggestions: `https://api.datamuse.com/sug?s=${query}`,
-                meansLike: `https://api.datamuse.com/words?ml=${query}`,
-                soundsLike: `https://api.datamuse.com/words?sl=${query}`,
-                spelledLike: `https://api.datamuse.com/words?sp=${query}*`,
-                relatedWords: `https://api.datamuse.com/words?rel_trg=${query}`,
-                topicWords: `https://api.datamuse.com/words?topics=${query}`
-            };
+            // Show loading message and hide the previous results
+            document.getElementById('loading').style.display = 'block';
+            const resultsTableBody = document.querySelector('#results-table tbody');
+            resultsTableBody.innerHTML = '';  // Clear previous results
 
-            const data = await Promise.all(
-                Object.entries(endpoints).map(async ([key, url]) => {
-                    try {
-                        const response = await fetch(url);
-                        const result = await response.json();
-                        return result.map(item => item.word); // No limit on results
-                    } catch (error) {
-                        console.error(`Error fetching ${key}:`, error);
-                        return ["Error"];
-                    }
+            // Fetch data from Datamuse API for literal meanings (means like)
+            const literalUrl = `https://api.datamuse.com/words?ml=${encodeURIComponent(searchTerm)}&max=100`;
+
+            // Fetch data from Datamuse API for figurative/contextual meanings (related triggers)
+            const figurativeUrl = `https://api.datamuse.com/words?rel_trg=${encodeURIComponent(searchTerm)}&max=100`;
+
+            // Fetch literal meanings
+            fetch(literalUrl)
+                .then(response => response.json())
+                .then(literalData => {
+                    // Fetch figurative meanings
+                    fetch(figurativeUrl)
+                        .then(response => response.json())
+                        .then(figurativeData => {
+                            // Hide loading message
+                            document.getElementById('loading').style.display = 'none';
+
+                            // Merge results and insert them into the table
+                            const maxResults = Math.max(literalData.length, figurativeData.length);
+                            for (let i = 0; i < maxResults; i++) {
+                                const row = document.createElement('tr');
+                                const literalCell = document.createElement('td');
+                                const figurativeCell = document.createElement('td');
+
+                                // Populate the cells with literal and figurative meanings
+                                literalCell.textContent = literalData[i] ? literalData[i].word : '';
+                                figurativeCell.textContent = figurativeData[i] ? figurativeData[i].word : '';
+
+                                row.appendChild(literalCell);
+                                row.appendChild(figurativeCell);
+                                resultsTableBody.appendChild(row);
+                            }
+                        })
+                        .catch(error => {
+                            document.getElementById('loading').style.display = 'none';
+                            alert('Error fetching figurative meanings. Please try again later.');
+                        });
                 })
-            );
-
-            updateTable(...data);
-        }
-
-        function updateTable(suggestions, meansLike, soundsLike, spelledLike, relatedWords, topicWords) {
-            const maxLength = Math.max(
-                suggestions.length,
-                meansLike.length,
-                soundsLike.length,
-                spelledLike.length,
-                relatedWords.length,
-                topicWords.length
-            );
-
-            let rows = "";
-            for (let i = 0; i < maxLength; i++) {
-                rows += `
-                    <tr>
-                        <td>${suggestions[i] || ""}</td>
-                        <td>${meansLike[i] || ""}</td>
-                        <td>${soundsLike[i] || ""}</td>
-                        <td>${spelledLike[i] || ""}</td>
-                        <td>${relatedWords[i] || ""}</td>
-                        <td>${topicWords[i] || ""}</td>
-                    </tr>
-                `;
-            }
-
-            document.getElementById("resultsTable").innerHTML = rows;
+                .catch(error => {
+                    document.getElementById('loading').style.display = 'none';
+                    alert('Error fetching literal meanings. Please try again later.');
+                });
         }
     </script>
 
