@@ -14,6 +14,12 @@
             text-align: center;
             color: #333;
         }
+
+        p {
+            text-align: center;
+            color: #333; 
+        }
+
         #search-container {
             text-align: center;
             margin-bottom: 20px;
@@ -64,13 +70,15 @@
 </head>
 <body>
 
-    <h1>Datamuse Word Search</h1>
+    <h1>Word Search</h1>
     <div id="search-container">
         <input type="text" id="search-term" placeholder="Enter a search term...">
         <input type="submit" value="Search" onclick="searchWords()">
     </div>
 
     <div id="loading" class="loading" style="display: none;">Loading results...</div>
+
+    <p><i>Because if API limitation, Figurative/Contextual Meanings only return if search term is one word</i></p>
 
     <table id="results-table">
         <thead>
