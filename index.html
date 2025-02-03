@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Finder</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+        input, button { padding: 10px; font-size: 16px; margin: 5px; }
+        input { width: 300px; }
+        table { width: 90%; margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f4f4f4; }
+    </style>
+</head>
+<body>
+
+    <h1>Word Finder</h1>
+    <input type="text" id="searchTerm" placeholder="Enter a word...">
+    <button onclick="fetchWords()">Search</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Suggestions</th>
+                <th>Means Like</th>
+                <th>Sounds Like</th>
+                <th>Spelled Like</th>
+                <th>Related Words</th>
+                <th>Topic Words</th>
+            </tr>
+        </thead>
+        <tbody id="resultsTable">
+            <tr>
+                <td colspan="6">Enter a word and click search...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        async function fetchWords() {
+            const query = document.getElementById("searchTerm").value.trim();
+            if (!query) {
+                document.getElementById("resultsTable").innerHTML = '<tr><td colspan="6">Enter a word and click search...</td></tr>';
+                return;
+            }
+
+            const endpoints = {
+                suggestions: `https://api.datamuse.com/sug?s=${query}`,
+                meansLike: `https://api.datamuse.com/words?ml=${query}`,
+                soundsLike: `https://api.datamuse.com/words?sl=${query}`,
+                spelledLike: `https://api.datamuse.com/words?sp=${query}*`,
+                relatedWords: `https://api.datamuse.com/words?rel_trg=${query}`,
+                topicWords: `https://api.datamuse.com/words?topics=${query}`
+            };
+
+            const data = await Promise.all(
+                Object.entries(endpoints).map(async ([key, url]) => {
+                    try {
+                        const response = await fetch(url);
+                        const result = await response.json();
+                        return result.map(item => item.word); // No limit on results
+                    } catch (error) {
+                        console.error(`Error fetching ${key}:`, error);
+                        return ["Error"];
+                    }
+                })
+            );
+
+            updateTable(...data);
+        }
+
+        function updateTable(suggestions, meansLike, soundsLike, spelledLike, relatedWords, topicWords) {
+            const maxLength = Math.max(
+                suggestions.length,
+                meansLike.length,
+                soundsLike.length,
+                spelledLike.length,
+                relatedWords.length,
+                topicWords.length
+            );
+
+            let rows = "";
+            for (let i = 0; i < maxLength; i++) {
+                rows += `
+                    <tr>
+                        <td>${suggestions[i] || ""}</td>
+                        <td>${meansLike[i] || ""}</td>
+                        <td>${soundsLike[i] || ""}</td>
+                        <td>${spelledLike[i] || ""}</td>
+                        <td>${relatedWords[i] || ""}</td>
+                        <td>${topicWords[i] || ""}</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById("resultsTable").innerHTML = rows;
+        }
+    </script>
+
+</body>
+</html>
